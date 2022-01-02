@@ -68,6 +68,8 @@
 
      - name: Create user for wordpress
        community.mysql.mysql_user:
+         login_user: root
+         login_password: ";jgjXrf500"
          state: present
          name: wpuser
          password: wpuser1000%passwd

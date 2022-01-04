@@ -59,9 +59,9 @@
      - name: restart systemd
        command: systemctl daemon-reload
 
-     - name: restart systemd
+     - name: enable tomcat
        command: systemctl enable tomcat
 
-     - name: restart systemd
+     - name: start tomcat
        command: systemctl start tomcat
 

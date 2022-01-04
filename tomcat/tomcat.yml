@@ -36,3 +36,32 @@
           dest: /opt/tomcat/latest
           owner: tomcat
           state: link
+
+     - name: "Give insecure permissions to an existing file"
+       ansible.builtin.file:
+          path: /opt/tomcat
+          owner: tomcat
+          group: tomcat
+          recurse: true    
+
+     - name: "make executive files"
+       ansible.builtin.file:
+          path: /opt/tomcat/latest/bin/
+          recurse: true
+          mode: "0755"
+
+
+     - name: Copy tomcat.service file
+       ansible.builtin.copy:
+          src: ./tomcat.service
+          dest: /etc/systemd/system/
+
+     - name: restart systemd
+       command: systemctl daemon-reload
+
+     - name: restart systemd
+       command: systemctl enable tomcat
+
+     - name: restart systemd
+       command: systemctl start tomcat
+

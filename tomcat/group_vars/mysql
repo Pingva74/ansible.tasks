@@ -1,5 +1,0 @@
----
-percona_root_user  :  root
-percona_root_pass  :  ;jgjXrf500
-percona_site_user  :  wpuser
-percona_site_pass  :  wpuser1000%passwd

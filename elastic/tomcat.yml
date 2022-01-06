@@ -1,0 +1,67 @@
+---
+  - hosts: "tomcat"
+    become: yes
+    tasks:
+
+     - name: "Install Open JDK"
+       yum:
+        name:
+         - "java-1.8.0-openjdk-devel"
+        state: present
+
+     - name: "Add Tomcat user"
+       user:
+         name : tomcat
+         create_home : yes
+         home : /opt/tomcat
+         shell : /bin/false
+         state : present                
+
+     - name: "Download Tomcat 9"
+       get_url:
+         url: https://downloads.apache.org/tomcat/tomcat-9/v9.0.56/bin/apache-tomcat-9.0.56.tar.gz
+         dest: /tmp
+         mode: '0766'
+
+
+     - name: "Extract tomcat to /opt/tomcat"
+       ansible.builtin.unarchive:
+          src: /tmp/apache-tomcat-9.0.56.tar.gz
+          dest: /opt/tomcat
+          remote_src : yes
+
+     - name: Create a symbolic link
+       ansible.builtin.file:
+          src: /opt/tomcat/apache-tomcat-9.0.56/
+          dest: /opt/tomcat/latest
+          owner: tomcat
+          state: link
+
+     - name: "Give insecure permissions to an existing file"
+       ansible.builtin.file:
+          path: /opt/tomcat
+          owner: tomcat
+          group: tomcat
+          recurse: true    
+
+     - name: "make executive files"
+       ansible.builtin.file:
+          path: /opt/tomcat/latest/bin/
+          recurse: true
+          mode: "0755"
+
+
+     - name: Copy tomcat.service file
+       ansible.builtin.copy:
+          src: ./tomcat.service
+          dest: /etc/systemd/system/
+
+     - name: restart systemd
+       command: systemctl daemon-reload
+
+     - name: enable tomcat
+       command: systemctl enable tomcat
+
+     - name: start tomcat
+       command: systemctl start tomcat
+

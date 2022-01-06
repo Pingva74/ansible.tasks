@@ -1,0 +1,35 @@
+---
+  - hosts: "elasticsearch"
+    become: yes
+    tasks:
+
+     - name: "Install Open JDK"
+       yum:
+        name:
+         - "java-1.8.0-openjdk-devel"
+        state: present
+
+     - name: "Add GPG key"
+       command: rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+     - name: Copy elasticsearch.repo file
+       ansible.builtin.copy:
+          src: ./elasticsearch.repo
+          dest: /etc/yum.repos.d/
+
+     - name: Update all files
+       yum:
+         name: "*"
+         state: latest
+
+     - name: Instsll elasticsearch
+       yum:
+         name: "elasticsearch"
+         state: latest
+
+
+     - name: enable elasticsearch
+       command: systemctl enable elasticsearch
+
+     - name: start elasticsearch
+       command: systemctl start elasticsearch

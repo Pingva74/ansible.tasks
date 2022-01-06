@@ -23,9 +23,7 @@
          state: latest
 
      - name: Instsll elasticsearch
-       yum:
-         name: "elasticsearch"
-         state: latest
+       command: yum install -y --enablerepo=elasticsearch elasticsearch
 
 
      - name: enable elasticsearch

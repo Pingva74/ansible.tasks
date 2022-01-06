@@ -1,0 +1,51 @@
+---
+  - hosts: "jenkins"
+    become: yes
+    tasks:
+
+     - name: "Install Open JDK"
+       yum:
+        name:
+         - "java-1.8.0-openjdk-devel"
+        state: present
+
+     - name: Install epel
+       yum:
+         name: "epel-release"
+         state: latest
+
+     - name: enable epel repos
+       command: yum-config-manager --enable epel
+
+     - name: install demonize
+       yum:
+        name: "daemonize"
+        state: latest
+
+     - name: Copy jenkins.repo file
+       ansible.builtin.copy:
+          src: ./jenkins.repo
+          dest: /etc/yum.repos.d/
+
+     - name: "Add GPG key"
+       command: rpm --import https://jenkins-ci.org/redhat/jenkins-ci.org.key
+
+     - name: Update all files
+       yum:
+         name: "*"
+         state: latest
+
+     - name: Update Install
+       command : yum update -y
+
+     - name: Instsll jenkins
+       yum:
+         disable_gpg_check: yes
+         name: "jenkins"
+         state: latest
+
+     - name: enable elasticsearch
+       command: systemctl enable jenkins
+
+     - name: start elasticsearch
+       command: systemctl start jenkins

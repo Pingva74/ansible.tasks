@@ -44,8 +44,39 @@
          name: "jenkins"
          state: latest
 
-     - name: enable elasticsearch
+     - name: enable jenkins
        command: systemctl enable jenkins
 
-     - name: start elasticsearch
+     - name: start jenkins
        command: systemctl start jenkins
+
+     - name: Instsll nginx
+       yum:
+         name: "nginx"
+         state: latest
+
+     - name: "nginx conf copy to Server"
+       copy:
+         src: ./jenkins.conf
+         dest: /etc/nginx/conf.d/
+         owner: root
+         group: root
+         mode: 0644
+
+     - name: start nginx
+       command: systemctl start nginx
+
+     - name: enable nginx
+       command: systemctl enable nginx
+
+     - name: Make pause to start
+       command: sleep 20
+
+     - name: init password jenkin
+       shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+       changed_when: false
+       register: result
+
+     - name: print init password jenkins
+       debug:
+          var: result.stdout

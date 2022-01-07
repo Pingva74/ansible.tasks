@@ -1,0 +1,47 @@
+---
+  - hosts: "nexus"
+    become: yes
+    tasks:
+
+     - name: "Install Open JDK"
+       yum:
+        name:
+         - "java-1.8.0-openjdk-devel"
+        state: present
+
+     - name: "Add nexus user"
+       user:
+         name : nexus
+         create_home : no
+         state : present
+
+     - name: Create a directory /data/nexus-data if it does not exist
+       ansible.builtin.file:
+          path: /data/nexus-data
+          state: directory
+          owner: nexus
+          group: nexus
+          mode: '0755'
+
+     - name: Create a directory /opt/nexus-data if it does not exist
+       ansible.builtin.file:
+          path: /opt/nexus
+          state: directory
+          owner: nexus
+          group: nexus
+          mode: '0755'
+
+     - name: Update all files
+       yum:
+         name: "*"
+         state: latest
+
+     - name: Instsll elasticsearch
+       command: yum install -y --enablerepo=elasticsearch elasticsearch
+
+
+     - name: enable elasticsearch
+       command: systemctl enable elasticsearch
+
+     - name: start elasticsearch
+       command: systemctl start elasticsearch

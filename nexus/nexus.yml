@@ -3,45 +3,101 @@
     become: yes
     tasks:
 
+     - name: Install epel
+       yum:
+         name: "epel-release"
+         state: latest
+
+     - name: enable epel repos
+       command: yum-config-manager --enable epel
+
      - name: "Install Open JDK"
        yum:
         name:
          - "java-1.8.0-openjdk-devel"
+         - "which"
+         - "nginx"
         state: present
 
      - name: "Add nexus user"
        user:
          name : nexus
-         create_home : no
+         create_home : yes
          state : present
 
-     - name: Create a directory /data/nexus-data if it does not exist
+     - name: Create a directory /nexus/nexus-data if it does not exist
        ansible.builtin.file:
-          path: /data/nexus-data
+          path: /nexus/nexus-data
           state: directory
           owner: nexus
           group: nexus
           mode: '0755'
 
-     - name: Create a directory /opt/nexus-data if it does not exist
+#     - name: Create a directory /nexus/nexus-data if it does not exist#
+#       ansible.builtin.file:
+#          path: /app/nexus
+#          state: directory
+#          owner: nexus
+#          group: nexus
+#          mode: '0755'
+
+     - name: Create a directory /nexus/nexus-data if it does not exist
        ansible.builtin.file:
-          path: /opt/nexus
+          path: /app/sonatype-work
           state: directory
           owner: nexus
           group: nexus
           mode: '0755'
+
+     - name: "Download nexus"
+       get_url:
+         url: https://download.sonatype.com/nexus/3/nexus-3.37.0-01-unix.tar.gz
+         dest: /tmp
+         mode: '0766'
+
+     - name: "Extract nexus to /opt/nexus"
+       ansible.builtin.unarchive:
+          src: /tmp/nexus-3.37.0-01-unix.tar.gz
+          dest: /app
+          remote_src : yes
+
+     - name: move dirs
+       command: mv /app/nexus-3.37.0-01 /app/nexus
+
+     - name: Copy nexus.rc file
+       ansible.builtin.copy:
+          src: ./nexus.rc
+          dest: /app/nexus/bin/
+
+     - name: Copy nexus.vmoptions file
+       ansible.builtin.copy:
+          src: ./nexus.vmoptions
+          dest: /app/nexus/bin
+
+     - name: "Give insecure permissions to an existing file"
+       ansible.builtin.file:
+          path: /app/nexus
+          owner: nexus
+          group: nexus
+          recurse: true
 
      - name: Update all files
        yum:
          name: "*"
          state: latest
 
-     - name: Instsll elasticsearch
-       command: yum install -y --enablerepo=elasticsearch elasticsearch
+     - name: Copy nexus.rc file
+       ansible.builtin.copy:
+          src: ./nexus.service
+          dest: /etc/systemd/system
 
 
-     - name: enable elasticsearch
-       command: systemctl enable elasticsearch
 
-     - name: start elasticsearch
-       command: systemctl start elasticsearch
+     - name: restart systemd
+       command: systemctl daemon-reload
+
+     - name: enable nexus
+       command: systemctl enable nexus
+
+     - name: start nexus
+       command: systemctl start nexus

@@ -1,0 +1,95 @@
+---
+  - hosts: "docker"
+    become: yes
+    tasks:
+
+     - name: "Install yum utils)"
+       yum:
+        name:
+         - "yum-utils"
+        state: present
+
+     - name: Set FORWARD policy to ACCEPT
+       ansible.builtin.iptables:
+         chain: FORWARD
+         policy: ACCEPT
+
+     - name: Add repos
+       command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+     - name: "install docker"
+       yum:
+        name:
+          - "docker-ce"
+          - "docker-ce-cli"
+          - "containerd.io"
+        state: present
+
+     - name: "download docker compose"
+       get_url:
+         url: https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64
+         dest: /usr/local/bin/docker-compose
+         owner: root
+         group: root
+         mode: 0755
+
+     - name: "add alex to the docker group"
+       command: "usermod -aG docker alex"
+
+     - name: "start"
+       command: "systemctl start docker"
+
+     - name: "enable"
+       command: "systemctl enable docker"
+
+     - name: Copy vraper file
+       ansible.builtin.copy:
+          src: ./lockal.repo/vraper.sh
+          dest: /tmp
+          owner: root
+          group: root
+          mode: '0755'
+
+     - name: stop firewalld if exist
+       shell: /tmp/vraper.sh
+
+     - name: Copy docker-config file
+       ansible.builtin.copy:
+          src: ./lockal.repo/daemon.json
+          dest: /etc/docker
+          owner: root
+          group: root
+          mode: '0600'
+
+     - name: daemon reload
+       shell: systemctl daemon-reload
+
+     - name: Copy kubernetes-repo file
+       ansible.builtin.copy:
+          src: ./lockal.repo/kubernetes.repo
+          dest: /etc/yum.repos.d
+          owner: root
+          group: root
+          mode: '0644'
+
+     - name: "install kubernetes components"
+       yum:
+        name:
+          - "kubelet"
+          - "kubeadm"
+          - "kubectl"
+        state: present
+
+     - name: modprobe overlay
+       shell: modprobe overlay
+
+     - name: modprobe br_netfilter
+       shell: modprobe br_netfilter
+
+     - name: Copy containerd.conf file
+       ansible.builtin.copy:
+          src: ./lockal.repo/containerd.conf
+          dest: /etc/modules-load.d
+          owner: root
+          group: root
+          mode: '0644'

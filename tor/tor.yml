@@ -1,0 +1,14 @@
+
+---
+  - hosts: "tor"
+    become: yes
+    tasks:
+     - name: "Install tor"
+       yum:
+        name:
+         - "epel-release"
+         - "tor"
+        state: present
+
+     - name: start tor
+       shell: "sudo -u toranon -H tor &"

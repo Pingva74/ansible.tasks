@@ -1,0 +1,7 @@
+---
+  - hosts: "docker"
+    become: yes
+    tasks:
+
+     - name: Add repos
+       command: shutdown -h now

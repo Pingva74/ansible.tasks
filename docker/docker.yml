@@ -27,3 +27,12 @@
          owner: root
          group: root
          mode: 0755
+
+     - name: "add alex to the docker group"
+       command: "usermod -aG docker alex"
+
+     - name: "start"
+       command: "systemctl start docker"
+
+     - name: "enable"
+       command: "systemctl enable docker"

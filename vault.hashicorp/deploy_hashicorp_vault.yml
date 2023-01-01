@@ -24,7 +24,7 @@
       mode: '0440'
 
   - name: install unzip
-    yum:
+    ansible.builtin.apt:
       name:
         - unzip
       state: latest

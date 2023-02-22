@@ -1,0 +1,157 @@
+---
+- hosts: "wp"
+  become: yes
+  vars_files:
+   - ./vars.yml
+  tasks:
+# tasks file for centos8-lemp
+
+  - name: Install epel
+    yum:
+      name: "epel-release"
+      state: latest
+
+  - name: enable epel repos
+    command: yum install yum-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+
+  - name: install lemp packages
+    yum:
+      name: '{{ item }}'
+      state: present
+    loop:
+    - nginx
+    - mariadb-server, mariadb, python-pip, MySQL-python
+    - php7, php7-cli, php7-fpm, php7-mysql, php7-json, php7-opcache, php7-mbstring, php7-xml, php7-gd, php7-curl
+#    - php, php-mysqlnd, php-fpm, php-opcache, php-gd, php-xml, php-mbstring
+
+  - name: start services
+    service:
+      name: '{{ item }}'
+      state: started
+      enabled: true
+    loop:
+    - nginx
+    - mariadb
+    - php-fpm
+
+  - name: Sets Nginx conf file
+    template:
+      src: "./templates/wp.conf.j2"
+      dest: "/etc/nginx/sites-available/{{ http_conf }}"
+
+  - name: make nginx owner of web directory
+    file:
+      path: /usr/share/nginx/html
+      recurse: yes
+      owner: nginx
+      group: nginx
+
+  - name: change php user to nginx
+    lineinfile:
+      path: /etc/php-fpm.d/www.conf
+      regexp: '^{{ item.apache }}'
+      line: '{{ item.nginx }}'
+    loop:
+    - user:
+      apache: "user ="
+      nginx: "user = nginx"
+    - group:
+      apache: "group ="
+      nginx: "group = nginx"
+    notify: restart php
+
+  - name: listen on unix socket not tcp/ip
+    lineinfile:
+      path: /etc/php-fpm.d/www.conf
+      regexp: "listen ="
+      line: "listen = /run/php-fpm/www.sock"
+      state: present
+    notify: restart php
+
+  - name: create php test page
+    copy:
+      dest: /usr/share/nginx/html/info.php
+      content: "<?php phpinfo(); ?>"
+      owner: nginx
+      group: nginx
+    notify:
+    - restart nginx
+    - restart php
+
+  - name: change root password
+    mysql_user:
+      name: root
+      password: '{{ db_root_password }}'
+      host_all: yes
+    notify: restart mariadb
+
+  - name: apply /root/.my.cnf
+    template:
+      src: templates/my.cnf.j2
+      dest: /root/.my.cnf
+      mode: 0600
+      owner: root
+      group: root
+    notify: restart mariadb
+
+  - name: remove anonymous users
+    mysql_user:
+      name: ''
+      host_all: yes
+      state: absent
+    notify: restart mariadb
+
+  - name: remove test database
+    mysql_db:
+      name: test
+      state: absent
+    notify: restart mariadb
+
+  - name: Copy vraper file
+    ansible.builtin.copy:
+      src: ./vraper.sh
+      dest: /tmp
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: stop firewalld if exist
+    shell: /tmp/vraper.sh
+
+  - name: "open ports"
+    ansible.builtin.iptables:
+     chain: INPUT
+     protocol: tcp
+     destination_ports:
+       - "22"
+       - "80"
+       - "443"
+     jump: ACCEPT
+
+  - name: Allow connections, if established
+    ansible.builtin.iptables:
+      chain: INPUT
+      ctstate: ESTABLISHED,RELATED
+      jump: ACCEPT
+    become: yes
+
+  - name: Set INPUT policy to DROP
+    ansible.builtin.iptables:
+      chain: INPUT
+      policy: DROP
+
+  handlers:
+  - name: restart nginx
+    service:
+      name: nginx
+      state: restarted
+
+  - name: restart php
+    service:
+      name: php-fpm
+      state: restarted
+
+  - name: restart mariadb
+    service:
+      name: mariadb
+      state: restarted

@@ -1,0 +1,100 @@
+---
+# tasks file for rabbitmq setup
+  - hosts: "rabbit"
+    become: yes
+    tasks:
+
+    - name: update
+      command: apt update
+
+    - name: upgrade
+      command: apt upgrade -y
+
+    - name: Install nessesary package
+      apt: 
+          name: 
+            - "apt-transport-https"
+            - "curl"
+          state: present
+
+    - name: instal key
+      shell: curl -1sLf "https://keys.openpgp.org/vks/v1/by-fingerprint/0A9AF2115F4687BD29803A206B73A36E6026DFCA" | gpg --dearmor | tee /usr/share/keyrings/com.rabbitmq.team.gpg > /dev/null
+    
+    - name: Launchpad PPA that provides modern Erlang releases
+      shell: curl -1sLf "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xf77f1eda57ebb1cc" | gpg --dearmor | tee /usr/share/keyrings/net.launchpad.ppa.rabbitmq.erlang.gpg > /dev/null
+
+    - name: PackageCloud RabbitMQ repository
+      shell: curl -1sLf "https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey" | gpg --dearmor |  tee /usr/share/keyrings/io.packagecloud.rabbitmq.gpg > /dev/null
+
+    - name: Copy rabbitmq.list
+      ansible.builtin.copy:
+        src: ./rabbitmq.list
+        dest: /etc/apt/sources.list.d/rabbitmq.list
+    
+    - name: update
+      command: apt update -y 
+
+    - name: Install Erlang packages
+      apt: 
+       name:
+        - "erlang-base"
+        - "erlang-asn1"
+        - "erlang-crypto"
+        - "erlang-eldap"
+        - "erlang-ftp"
+        - "erlang-inets"
+        - "erlang-mnesia"
+        - "erlang-os-mon"
+        - "erlang-parsetools"
+        - "erlang-public-key"
+        - "erlang-runtime-tools"
+        - "erlang-snmp"
+        - "erlang-ssl"
+        - "erlang-syntax-tools"
+        - "erlang-tftp"
+        - "erlang-tools"
+        - "erlang-xmerl"
+       state: present
+
+    - name: install ./rebbitmq.list
+      command: apt-get install rabbitmq-server -y --fix-missing
+
+    - name: rebbit start
+      command: systemctl start rabbitmq-server
+
+    - name: GUI on
+      command: rabbitmq-plugins enable rabbitmq_management
+
+    # - name: add rabbitmq user
+    #   shell: rabbitmqctl add_user dev1 javadev
+
+    # - name: make dev administrator
+    #   shell: rabbitmqctl set_user_tags dev1 administrator
+
+    # - name: set permisions
+    #   shell: rabbitmqctl set_permissions -p / dev1 ".*" ".*" ".*"
+
+    - name: add user
+      community.rabbitmq.rabbitmq_user:
+        user: devuser
+        password: devuserpassword
+        vhost: /
+        configure_priv: .*
+        read_priv: .*
+        write_priv: .*
+        state: present
+
+    - name: add exchange
+      community.rabbitmq.rabbitmq_exchange:
+        name: myexchange
+        type: fanout
+
+    - name: add a queue
+      community.rabbitmq.rabbitmq_queue:
+        name: myqueue
+
+    - name: bind myqueue to myexchange
+      community.rabbitmq.rabbitmq_binding:
+        name: myexchange
+        destination: myqueue
+        type: queue
